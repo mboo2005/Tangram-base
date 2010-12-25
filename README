@@ -18,6 +18,8 @@ For more information about Tangram, visit:
 http://tangram.baidu.com
 
 To developers:
-If you want to commit code, please fork development branch.
+If you want to commit code, please fork dev branch.
+git pull https://github.com/BaiduFE/Tangram-base.git dev
+
 you can find unit test here:
 http://localhost/path/to/tangram/test/tools/br/list.php 
