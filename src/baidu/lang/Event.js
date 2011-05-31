@@ -11,16 +11,19 @@
 
 ///import baidu.lang.Class;
 ///import baidu.lang.guid;
+///import baidu.lang.isFunction;
+///import baidu.lang.isString;
 
 /**
- * 自定义的事件对象。
- * @function
+ * 
+ * @class   自定义的事件对象。
  * @name 	baidu.lang.Event
  * @grammar baidu.lang.Event(type[, target])
  * @param 	{string} type	 事件类型名称。为了方便区分事件和一个普通的方法，事件类型名称必须以"on"(小写)开头。
  * @param 	{Object} [target]触发事件的对象
  * @meta standard
  * @remark 引入该模块，会自动为Class引入3个事件扩展方法：addEventListener、removeEventListener和dispatchEvent。
+ * @meta standard
  * @see baidu.lang.Class
  */
 baidu.lang.Event = function (type, target) {
@@ -39,9 +42,8 @@ baidu.lang.Event = function (type, target) {
  * @remark 	事件类型区分大小写。如果自定义事件名称不是以小写"on"开头，该方法会给它加上"on"再进行判断，即"click"和"onclick"会被认为是同一种事件。 
  */
 baidu.lang.Class.prototype.addEventListener = function (type, handler, key) {
-    if (typeof handler != "function") {
+    if (!baidu.lang.isFunction(handler)) {
         return;
-        // throw("addEventListener:" + handler + " is not a function");
     }
 
     !this.__listeners && (this.__listeners = {});
@@ -71,10 +73,12 @@ baidu.lang.Class.prototype.addEventListener = function (type, handler, key) {
  * @remark 	如果第二个参数handler没有被绑定到对应的自定义事件中，什么也不做。
  */
 baidu.lang.Class.prototype.removeEventListener = function (type, handler) {
-    if (typeof handler == "function") {
-        handler = handler.hashCode;
-    } else if (typeof handler != "string") {
-        return;
+    if (typeof handler != "undefined") {
+        if ( (baidu.lang.isFunction(handler) && ! (handler = handler.hashCode))
+            || (! baidu.lang.isString(handler))
+        ){
+            return;
+        }
     }
 
     !this.__listeners && (this.__listeners = {});
@@ -85,7 +89,13 @@ baidu.lang.Class.prototype.removeEventListener = function (type, handler) {
     if (!t[type]) {
         return;
     }
-    t[type][handler] && delete t[type][handler];
+    if (typeof handler != "undefined") {
+        t[type][handler] && delete t[type][handler];
+    } else {
+        for(var guid in t[type]){
+            delete t[type][guid];
+        }
+    }
 };
 
 /**
@@ -98,7 +108,7 @@ myobj.onMyEvent = function(){}<br>
 myobj.addEventListener("onMyEvent", function(){});
  */
 baidu.lang.Class.prototype.dispatchEvent = function (event, options) {
-    if("string" == typeof event){
+    if (baidu.lang.isString(event)) {
         event = new baidu.lang.Event(event);
     }
     !this.__listeners && (this.__listeners = {});
@@ -115,7 +125,7 @@ baidu.lang.Class.prototype.dispatchEvent = function (event, options) {
 
     p.indexOf("on") != 0 && (p = "on" + p);
 
-    typeof this[p] == "function" && this[p].apply(this, arguments);
+    baidu.lang.isFunction(this[p]) && this[p].apply(this, arguments);
 
     if (typeof t[p] == "object") {
         for (i in t[p]) {

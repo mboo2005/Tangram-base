@@ -11,8 +11,10 @@
 ///import baidu.swf;
 
 /**
+ * 浏览器支持的flash插件版本
  * @property version 浏览器支持的flash插件版本
  * @grammar baidu.swf.version 
+ * @meta standard
  */
 baidu.swf.version = (function () {
     var n = navigator;
@@ -24,7 +26,7 @@ baidu.swf.version = (function () {
                     .replace(/(\s)+r/, ".") + ".0";
         }
     } else if (window.ActiveXObject && !window.opera) {
-        for (var i = 10; i >= 2; i--) {
+        for (var i = 12; i >= 2; i--) {
             try {
                 var c = new ActiveXObject('ShockwaveFlash.ShockwaveFlash.' + i);
                 if (c) {

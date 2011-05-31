@@ -8,10 +8,11 @@
  * date: 2009/11/23
  */
 
-///import baidu.event._unload;
+///import baidu.event;
 
 /**
  * 事件监听器的存储表
  * @private
+ * @meta standard
  */
 baidu.event._listeners = baidu.event._listeners || [];

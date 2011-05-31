@@ -9,6 +9,7 @@
  */
 
 ///import baidu.dom._styleFixer;
+///import baidu.dom.getStyle;
 ///import baidu.browser.firefox;
 ///import baidu.browser.opera;
 
@@ -55,10 +56,10 @@ baidu.dom._styleFixer.textOverflow = (function () {
                 cache[i] = o.offsetWidth;
             }
 
-            /* 计算非ASCII字符的宽度、字符间距、省略号的宽度 */
-            setText(o, "一");
+            /* 计算非ASCII字符的宽度、字符间距、省略号的宽度,\u4e00是汉字一的编码*/
+            setText(o, "\u4e00");
             cache[256] = o.offsetWidth;
-            setText(o, "一一");
+            setText(o, "\u4e00\u4e00");
             cache[257] = o.offsetWidth - cache[256] * 2;
             cache[258] = cache[".".charCodeAt(0)] * 3 + cache[257] * 3;
 
@@ -130,9 +131,15 @@ baidu.dom._styleFixer.textOverflow = (function () {
     }
 
     return {
-		get: function (element, style) {
-            var browser = baidu.browser;
-			return (browser.opera ? style.OTextOverflow : browser.firefox ? element._baiduOverflow: style.textOverflow) || "clip";
+		get: function (element) {
+            var browser = baidu.browser,
+                getStyle = dom.getStyle;
+			return (browser.opera ?
+                        getStyle("OTextOverflow") :
+                        browser.firefox ?
+                            element._baiduOverflow :
+                            getStyle("textOverflow")) ||
+                   "clip";
 		},
 
 		set: function (element, value) {

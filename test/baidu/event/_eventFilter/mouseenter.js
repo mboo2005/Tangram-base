@@ -32,8 +32,8 @@ test('on and un', function() {
 	ua.importsrc('baidu.event.on,baidu.event.un', function() {
 		var me = baidu.event._eventFilter.mouseenter;
 		var type = 'mouseenter';
-		if (window.attachEvent) {
-			equals(me, null, 'return null if ie');
+		if (ua.browser.ie || ua.browser.opera) {
+			equals(me, null, 'return null if ie or opera');
 			start();
 			return;
 		}
@@ -59,30 +59,28 @@ test('on and un', function() {
 		/**
 		 * 绑定div 触发div
 		 */
-		check( [ div, div, document.body ], function() {
+		check([ div, div, document.body ], function() {
 			ok(true, 'body 进入 div');
 		});
 
 		/**
 		 * 绑定body，冒泡 触发div
 		 */
-		console.log("start");
-		check( [ document.body, div, document.body ], function() {
+		check([ document.body, div, document.body ], function() {
 			ok(false, "这里不应该被执行");
 		});
-		console.log("end");
 
 		/**
 		 * 绑定div 触发div 关联div1
 		 */
-		check( [ div1, div1, div ], function() {
+		check([ div1, div1, div ], function() {
 			ok(true, 'div 进入 div1');
 		});
 
 		/**
 		 * 绑定div 触发div 关联div1
 		 */
-		check( [ document.body, div1, div ], function() {
+		check([ document.body, div1, div ], function() {
 			ok(false, 'div 进入 div1');
 		});
 
@@ -94,30 +92,30 @@ test('on and un', function() {
 });
 
 /**
- * mouseover事件，UserAction.mouseover模拟mouseover不能产生relatedTarget，需要手动提供relatedTarget；
+ * mouseover事件，ua.mouseover模拟mouseover不能产生relatedTarget，需要手动提供relatedTarget；
  * 鼠标移动到子元素后也会触发mouseover事件，本用例还验证了mouseover到子元素时触发情况，正确的结果是mouseover到子元素时不能执行监听函数
  */
 
 test('relatedTarget', function() {
-	// stop();
-		// ua.importsrc('baidu.event.on,baidu.event.un', function() {
-		expect(1);
-		var div = document.body.appendChild(document.createElement('div'));
-		$(div).css('left', '0').css('top', '0').css('height', '200px').css(
-				'width', '200px').css('background-color', 'blue');
-		var div1 = document.createElement('div');
-		$(div1).css('left', '0').css('top', '0').css('height', '150px').css(
-				'width', '150px').css('background-color', 'red');
-		div.appendChild(div1);
-		var div2 = document.createElement('div');
-		$(div2).css('left', '0').css('top', '0').css('height', '100px').css(
-				'width', '100px').css('background-color', 'green');
-		div1.appendChild(div2);
-		function callback() {
-			ok(true, "mouseenter is trigged");
-		}
-		baidu.event.on(div1, "mouseenter", callback);
-		// 模拟从里往外走
+	expect(1);
+	var div = document.body.appendChild(document.createElement('div'));
+	var div1 = div.appendChild(document.createElement('div'));
+	var div2 = div1.appendChild(document.createElement('div'));
+	$(div).css('left', '0').css('top', '0').css('height', '200px').css('width',
+			'200px').css('background-color', 'blue');
+	$(div1).css('left', '0').css('top', '0').css('height', '150px').css(
+			'width', '150px').css('background-color', 'red');
+	$(div2).css('left', '0').css('top', '0').css('height', '100px').css(
+			'width', '100px').css('background-color', 'green');
+	function callback(e) {
+		ok(true, "mouseenter is trigged");// 应该只触发一次
+	}
+
+	baidu.event.on(div1, "mouseenter", callback);
+	if (ua.browser.ie || ua.browser.opera) {
+		ua.simulateMouseEvent(div1, 'mouseenter', 0, 0, window, 1, 0, 0, 0, 0,
+				false, false, false, false, 0, div);
+	} else {
 		ua.mouseover(div2, {
 			relatedTarget : document.body
 		});
@@ -127,6 +125,28 @@ test('relatedTarget', function() {
 		ua.mouseover(div2, {
 			relatedTarget : div1
 		});
-		// start();
-		// });
+	}
+});
+
+test('增加一个related为空或prefix为null的情况', function() {
+
+	expect(2);
+	baidu.event.on(document.body, "mouseenter", function(e) {
+		ok(true, 'related target is ' + e.relatedTarget);
 	});
+	if (ua.browser.ie || ua.browser.opera) {
+		ua.simulateMouseEvent(document.body, 'mouseenter', 0, 0, window, 1, 0, 0, 0, 0,
+				false, false, false, false, 0, document.documentElement);
+		ua.simulateMouseEvent(document.body, 'mouseenter', 0, 0, window, 1, 0, 0, 0, 0,
+				false, false, false, false, 0, null);
+	} else {
+		ua.mouseover(document.body, {
+			relatedTarget : document.documentElement
+		// 从窗口外慢速划入
+		});
+		ua.mouseover(document.body, {
+			relatedTarget : null
+		// 从窗口外快速滑入
+		});
+	}
+});

@@ -3,10 +3,8 @@ module("preventDefault");
 test("阻止默认行为", function() {
 	expect(1);
 	var div = document.createElement('div');
-	var img = document.createElement('img');
-	img.src = upath + 'test.jpg';
-	img.style.height = "2000px";
-	div.appendChild(img);
+	$(div).css('width', 200).css('height', 5000).css('border', 'solid');
+//	div.appendChild(img);
 	document.body.appendChild(div);
 	var a = document.createElement('a');
 	a.setAttribute("href", "#");
@@ -15,11 +13,11 @@ test("阻止默认行为", function() {
 	document.body.appendChild(a);
 	window.scrollTo(0, document.body.scrollHeight);
 
-	UserAction.beforedispatch = function(e){
+	ua.beforedispatch = function(e){
 		e = e || window.event;
 		baidu.event.preventDefault(e);	
 	};
-	UserAction.click(a);
+	ua.click(a);
 	var top = window.pageYOffset 
     || document.documentElement.scrollTop 
     || document.body.scrollTop 
