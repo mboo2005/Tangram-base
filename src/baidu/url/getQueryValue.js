@@ -21,13 +21,13 @@
  * @meta standard
  * @see baidu.url.jsonToQuery
  *             
- * @returns {string|null} 获取的参数值，获取不到时返回null
+ * @returns {string|null} - 获取的参数值，其中URI编码后的字符不会被解码，获取不到时返回null
  */
 baidu.url.getQueryValue = function (url, key) {
     var reg = new RegExp(
                         "(^|&|\\?|#)" 
                         + baidu.string.escapeReg(key) 
-                        + "=([^&]*)(&|\x24)", 
+                        + "=([^&#]*)(&|\x24|#)", 
                     "");
     var match = url.match(reg);
     if (match) {

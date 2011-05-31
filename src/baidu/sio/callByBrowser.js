@@ -1,36 +1,37 @@
 /*
  * Tangram
  * Copyright 2009 Baidu Inc. All rights reserved.
- * 
- * path: baidu/sio/callByBrowser.js
- * author: erik
- * version: 1.1.0
- * date: 2009/12/16
  */
 
 ///import baidu.sio;
+///import baidu.sio._createScriptTag;
 ///import baidu.sio._removeScriptTag;
 
 /**
  * 通过script标签加载数据，加载完成由浏览器端触发回调
  * @name baidu.sio.callByBrowser
  * @function
- * @grammar baidu.sio.callByBrowser(url[, callback, options])
+ * @grammar baidu.sio.callByBrowser(url, opt_callback, opt_options)
  * @param {string} url 加载数据的url
- * @param {Function} [callback] 数据加载结束时调用的函数
- * @param {Object} [options] 其他可选项
+ * @param {Function|string} opt_callback 数据加载结束时调用的函数或函数名
+ * @param {Object} opt_options 其他可选项
  * @config {String} [charset] script的字符集
+ * @config {Integer} [timeOut] 超时时间，超过这个时间将不再响应本请求，并触发onfailure函数
+ * @config {Function} [onfailure] timeOut设定后才生效，到达超时时间时触发本函数
  * @remark
  * 1、与callByServer不同，callback参数只支持Function类型，不支持string。
- * 2、如果请求了一个不存在的页面，onsuccess函数也可能被调用（在IE/opera下），因此使用者需要在onsuccess函数中判断数据是否正确加载。
+ * 2、如果请求了一个不存在的页面，callback函数在IE/opera下也会被调用，因此使用者需要在onsuccess函数中判断数据是否正确加载。
+ * @meta standard
  * @see baidu.sio.callByServer
  */
-baidu.sio.callByBrowser = function (url, callback, options) {
-    options = options || {};
+baidu.sio.callByBrowser = function (url, opt_callback, opt_options) {
     var scr = document.createElement("SCRIPT"),
         scriptLoaded = 0,
-        attr,
-        charset = options['charset'];
+        options = opt_options || {},
+        charset = options['charset'],
+        callback = opt_callback || function(){},
+        timeOut = options['timeOut'] || 0,
+        timer;
     
     // IE和opera支持onreadystatechange
     // safari、chrome、opera支持onload
@@ -46,15 +47,22 @@ baidu.sio.callByBrowser = function (url, callback, options) {
             || readyState == "complete") {
             scriptLoaded = 1;
             try {
-                ('function' == typeof callback) && callback();
+                callback();
+                clearTimeout(timer);
             } finally {
+                scr.onload = scr.onreadystatechange = null;
                 baidu.sio._removeScriptTag(scr);
             }
         }
     };
+
+    if( timeOut ){
+        timer = setTimeout(function(){
+            scr.onload = scr.onreadystatechange = null;
+            baidu.sio._removeScriptTag(scr);
+            options.onfailure && options.onfailure();
+        }, timeOut);
+    }
     
-    scr.setAttribute('type', 'text/javascript');
-    charset && scr.setAttribute('charset', charset);
-    scr.setAttribute('src', url);
-    document.getElementsByTagName("head")[0].appendChild(scr);
+    baidu.sio._createScriptTag(scr, url, charset);
 };

@@ -10,6 +10,7 @@ test("URL中只有一个参数的情况", function(){
 	same(baidu.url.queryToJson("http://baidu.com?Key123!@=Value456*("), {"Key123!@":"Value456*("}, '');
 	same(baidu.url.queryToJson("http://baidu.com?k=v"), {"k":"v"}, '');
 	same(baidu.url.queryToJson("http://baidu.com?中文abc=英文123"), {"中文abc":"英文123"}, '');
+	same(baidu.url.queryToJson("http://baidu.com???中文abc=英文123"), {"中文abc":"英文123"}, '');
 	same(baidu.url.queryToJson("http://baidu.com?ＡＢｚ１２％\t\n=ｄｋＦＺ２３\b\a"), {"ＡＢｚ１２％\t\n":"ｄｋＦＺ２３\b\a"}, '');
 });
 
@@ -39,6 +40,10 @@ test("URL中存在相同的参数的情况，多值合并数组", function(){
 
 test("URL中存在數組", function(){
 	same(baidu.url.queryToJson("http://baidu.com?1=3&1=2&1=1&2=6&2=5&2=4&3=9&3=8&3=7"), {"1" : [ '3','2','1' ],"2" :[ '6','5','4' ],"3" : [ '9','8','7' ]}, '');
+})
+test("两个异常case", function(){
+	same(baidu.url.queryToJson(""), {},  '');
+	same(baidu.url.queryToJson("&a=1"), {a:"1"},  '');
 })
 
 //describe("baidu.url.queryToJson测试",{

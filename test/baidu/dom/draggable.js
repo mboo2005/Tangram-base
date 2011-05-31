@@ -1,5 +1,14 @@
 module('baidu.dom.draggable');
 
+var clear = function(element, dd, needstart) {
+	if (element)
+		$(element).remove();
+	if (dd && dd.dispose && typeof dd.dispose == 'function')
+		dd.dispose();
+	if (needstart)
+		start();
+};
+
 /* need move mouse before testing */
 test('check return value', function() {
 	expect(1);
@@ -7,7 +16,7 @@ test('check return value', function() {
 	document.body.appendChild(div);
 	var div1 = baidu.dom.draggable(div);
 	ok(baidu.lang.isFunction(div1.cancel), "check return function");
-	document.body.removeChild(div);
+	clear(div, div1);
 });
 
 test('drag,no options', function() {
@@ -19,34 +28,33 @@ test('drag,no options', function() {
 			'backgroundColor', 'red').css('width', '100px').css('height',
 			'100px');
 	var div1 = baidu.dom.draggable(div);// 注册onmousedown事件
-		UserAction.mousemove(div, {
-			clientX : 0,
-			clientY : 0
-		});
-		UserAction.mousedown(div, {
-			clientX : 0,
-			clientY : 0
-		});
-
-		var move = function(ele, x, y) {
-			if (x >= 100) {
-				UserAction.mouseup(ele);
-				equal(parseInt($(ele).css('left')), 100);
-				equal(parseInt($(ele).css('top')), 50);
-				document.body.removeChild(div);
-				start();
-			} else {
-				UserAction.mousemove(document, {
-					clientX : x + 10,
-					clientY : y + 5
-				});
-				setTimeout(function() {
-					move(ele, x + 10, y + 5);
-				}, 20);
-			}
-		};
-		move(div, 0, 0);
+	ua.mousemove(div, {
+		clientX : 0,
+		clientY : 0
 	});
+	ua.mousedown(div, {
+		clientX : 0,
+		clientY : 0
+	});
+
+	var move = function(ele, x, y) {
+		if (x >= 100) {
+			ua.mouseup(ele);
+			equal(parseInt($(ele).css('left')), 100);
+			equal(parseInt($(ele).css('top')), 50);
+			clear(div, div1, true);
+		} else {
+			ua.mousemove(document, {
+				clientX : x + 10,
+				clientY : y + 5
+			});
+			setTimeout(function() {
+				move(ele, x + 10, y + 5);
+			}, 20);
+		}
+	};
+	move(div, 0, 0);
+});
 
 test('options', function() {
 	stop();
@@ -69,29 +77,28 @@ test('options', function() {
 			setTimeout(function() {
 				equal(parseInt($(ele).css('left')), 30, 'stop left');
 				equal(parseInt($(ele).css('top')), 20, 'stop top');
-				document.body.removeChild(div);
-				start();
+				clear(div, div1, true);
 			}, 1);
 		},
 		range : [ 20, 130, 120, 30 ]
 	});
-	UserAction.mousemove(document, {
+	ua.mousemove(document, {
 		clientX : 0,
 		clientY : 0
 	});
 
-	UserAction.mousedown(div, {
+	ua.mousedown(div, {
 		clientX : 0,
 		clientY : 0
 	});
 	setTimeout(function() {
-		UserAction.mousemove(document, {
+		ua.mousemove(document, {
 			clientX : 50,
 			clientY : 50
 		});
 	}, 50);
 	setTimeout(function() {
-		UserAction.mouseup(div);
+		ua.mouseup(div);
 	}, 100);
 });
 
@@ -101,7 +108,7 @@ test('undraggble', function() {
 		var div = document.body.appendChild(document.createElement("div"));
 		$(div).css('width', 10).css('height', 10).css('backgroundColor', 'red')
 				.css('position', 'absolute').css('top', 0).css('left', 0);
-		var re = baidu.dom.draggable(div, {
+		var div1 = baidu.dom.draggable(div, {
 			ondragstart : function() {
 				ok(false, '方法不应该被触发');
 			},
@@ -112,7 +119,7 @@ test('undraggble', function() {
 				ok(false, '方法不应该被触发');
 			}
 		});
-		re.cancel();
+		div1.cancel();
 		setTimeout(function() {
 			ua.dragto(div, {
 				startX : 2,
@@ -122,14 +129,14 @@ test('undraggble', function() {
 				callback : function() {
 					equals(parseInt($(div).css('left')), 0);
 					equals(parseInt($(div).css('top')), 0);
-					$(div).remove();
-					start();
+					clear(div, div1, true);
 				}
 			});
 		}, 50);
 	};
-	
-	ua.importsrc('baidu.dom.ddManager', check, 'baidu.dom.ddManager', 'baidu.dom.draggable');
+
+	ua.importsrc('baidu.dom.ddManager', check, 'baidu.dom.ddManager',
+			'baidu.dom.draggable');
 });
 
 test('ddManager', function() {
@@ -155,22 +162,48 @@ test('ddManager', function() {
 	manager.addEventListener("ondrag", dragging);
 	manager.addEventListener("ondragend", dragend);
 
-	UserAction.mousemove(document, {
+	ua.mousemove(document, {
 		clientX : 0,
 		clientY : 0
 	});
-	UserAction.mousedown(div, {
+	ua.mousedown(div, {
 		clientX : 0,
 		clientY : 0
 	});
 	setTimeout(function() {
-		UserAction.mousemove(div, {
+		ua.mousemove(div, {
 			clientX : 100,
 			clientY : 50
 		});
 	}, 20);
 	setTimeout(function() {
-		UserAction.mouseup(div);
-		start();
+		ua.mouseup(div);
+		clear(div, div1, true);
 	}, 60);
 });
+//
+//// 测试非static元素是否可以正确移动，为便于定位，元素追加至某有特殊定位的父元素中
+//test('element none static', function() {
+//	var div = document.body.appendChild(document.createElement('div'));
+//	div.id = 'test_div1';
+//	$(div).css('position', 'fixed').css('width', 20).css('height', 20).css(
+//			'backgroundColor', 'red');
+//	var div1 = baidu.dom.draggable(div);
+////	equals($(div).css('position'), 'relative',
+////			'position应该更新为relative');
+//	/* 尝试拖动确认可以正确工作 */
+//	stop();
+//	setTimeout(function() {
+//		ua.dragto(div, {// 鼠标从2移动到12，元素应该也同步移动10
+//			startX : 2,
+//			startY : 2,
+//			endX : 12,
+//			endY : 12,
+//			callback : function() {
+//				equals($(div).css('position'), 'fixed');
+////				equals(parseInt($(div).css('top')), 10);
+////				clear(div, div1, true);
+//			}
+//		});
+//	}, 50);
+//});

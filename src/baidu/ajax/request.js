@@ -1,50 +1,50 @@
 /*
  * Tangram
  * Copyright 2009 Baidu Inc. All rights reserved.
- * 
- * path: baidu/ajax/request.js
- * author: allstar, erik, berg
- * version: 1.1.1
- * date: 2009/12/02
  */
 
 ///import baidu.ajax;
+///import baidu.fn.blank;
 
 /**
  * 发送一个ajax请求
+ * @author: allstar, erik, berg
  * @name baidu.ajax.request
  * @function
  * @grammar baidu.ajax.request(url[, options])
  * @param {string} 	url 发送请求的url
- * @param {Object} 	[options] 发送请求的选项参数
-				
+ * @param {Object=} 	opt_options 发送请求的选项参数
  * @config {String} 	[method] 			请求发送的类型。默认为GET
- * @config {Boolean} [async] 			是否异步请求。默认为true（异步）
+ * @config {Boolean}  [async] 			是否异步请求。默认为true（异步）
  * @config {String} 	[data] 				需要发送的数据。如果是GET请求的话，不需要这个属性
  * @config {Object} 	[headers] 			要设置的http request header
+ * @config {number}   [timeout]       超时时间，单位ms
  * @config {String} 	[username] 			用户名
  * @config {String} 	[password] 			密码
  * @config {Function} [onsuccess] 		请求成功时触发，function(XMLHttpRequest xhr, string responseText)。
  * @config {Function} [onfailure] 		请求失败时触发，function(XMLHttpRequest xhr)。
  * @config {Function} [onbeforerequest]	发送请求之前触发，function(XMLHttpRequest xhr)。
  * @config {Function} [on{STATUS_CODE}] 	当请求为相应状态码时触发的事件，如on302、on404、on500，function(XMLHttpRequest xhr)。3XX的状态码浏览器无法获取，4xx的，可能因为未知问题导致获取失败。
- * @config {Boolean} [noCache] 			是否需要缓存，默认为false（缓存），1.1.1起支持。
+ * @config {Boolean}  [noCache] 			是否需要缓存，默认为false（缓存），1.1.1起支持。
  * 
  * @meta standard
  * @see baidu.ajax.get,baidu.ajax.post,baidu.ajax.form
  *             
  * @returns {XMLHttpRequest} 发送请求的XMLHttpRequest对象
  */
-baidu.ajax.request = function (url, options) {
-	options = options || {};
-    var data        = options.data || "",
+baidu.ajax.request = function (url, opt_options) {
+    var options     = opt_options || {},
+        data        = options.data || "",
         async       = !(options.async === false),
         username    = options.username || "",
         password    = options.password || "",
         method      = (options.method || "GET").toUpperCase(),
         headers     = options.headers || {},
+        // 基本的逻辑来自lili同学提供的patch
+        timeout     = options.timeout || 0,
         eventHandlers = {},
-        key, xhr;
+        tick, key, xhr;
+
     /**
      * readyState发生变更时调用
      * 
@@ -99,8 +99,10 @@ baidu.ajax.request = function (url, options) {
              */
             window.setTimeout(
                 function() {
-                    // 避免内存泄露
-                    xhr.onreadystatechange = new Function();
+                    // 避免内存泄露.
+                    // 由new Function改成不含此作用域链的 baidu.fn.blank 函数,
+                    // 以避免作用域链带来的隐性循环引用导致的IE下内存泄露. By rocy 2011-01-05 .
+                    xhr.onreadystatechange = baidu.fn.blank;
                     if (async) {
                         xhr = null;
                     }
@@ -142,9 +144,19 @@ baidu.ajax.request = function (url, options) {
         
         // 不对事件类型进行验证
         if (handler) {
+            if (tick) {
+              clearTimeout(tick);
+            }
+
             if (type != 'onsuccess') {
                 handler(xhr);
             } else {
+                //处理获取xhr.responseText导致出错的情况,比如请求图片地址.
+                try {
+                    xhr.responseText;
+                } catch(error) {
+                    return handler(xhr);
+                }
                 handler(xhr, xhr.responseText);
             }
         } else if (globelHandler) {
@@ -157,8 +169,6 @@ baidu.ajax.request = function (url, options) {
     }
     
     
-   
-    
     for (key in options) {
         // 将options参数中的事件参数复制到eventHandlers对象中
         // 这里复制所有options的成员，eventHandlers有冗余
@@ -166,21 +176,19 @@ baidu.ajax.request = function (url, options) {
         eventHandlers[key] = options[key];
     }
     
-    //2010/11/26: 修改X-Request-By = 'baidu.ajax'成下面一句，与业界（jquery, yui, sencha, mootools）接轨。
-    headers['X-Request-With'] = 'XMLHttpRequest';
+    headers['X-Requested-With'] = 'XMLHttpRequest';
     
     
     try {
         xhr = getXHR();
         
         if (method == 'GET') {
-            url += (url.indexOf('?') >= 0 ? '&' : '?');
             if (data) {
-                url += data + '&';
+                url += (url.indexOf('?') >= 0 ? '&' : '?') + data;
                 data = null;
             }
             if(options['noCache'])
-                url += 'b' + (new Date()).getTime() + '=1';
+                url += (url.indexOf('?') >= 0 ? '&' : '?') + 'b' + (+ new Date) + '=1';
         }
         
         if (username) {
@@ -194,8 +202,10 @@ baidu.ajax.request = function (url, options) {
         }
         
         // 在open之后再进行http请求头设定
+        // FIXME 是否需要添加; charset=UTF-8呢
         if (method == 'POST') {
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.setRequestHeader("Content-Type",
+                (headers['Content-Type'] || "application/x-www-form-urlencoded"));
         }
         
         for (key in headers) {
@@ -205,6 +215,14 @@ baidu.ajax.request = function (url, options) {
         }
         
         fire('beforerequest');
+
+        if (timeout) {
+          tick = setTimeout(function(){
+            xhr.onreadystatechange = baidu.fn.blank;
+            xhr.abort();
+            fire("timeout");
+          }, timeout);
+        }
         xhr.send(data);
         
         if (!async) {
